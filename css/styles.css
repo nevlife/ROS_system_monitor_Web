@@ -18,8 +18,9 @@
 
 .connection-setup {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
 }
 
 .connection-setup input {
@@ -27,6 +28,7 @@
     border: 2px solid #ddd;
     border-radius: 5px;
     font-size: 0.9rem;
+    width: 400px;
 }
 
 .connection-setup input:focus {
@@ -34,11 +36,57 @@
     border-color: #3498db;
 }
 
+.connection-help {
+    margin-top: 2px;
+}
+
+.connection-help small {
+    color: #666;
+    font-size: 0.8rem;
+}
+
 .connection-status {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-left: 15px;
+    margin-top: 10px;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-indicator.connected {
+    background-color: #27ae60;
+    box-shadow: 0 0 6px rgba(39, 174, 96, 0.6);
+}
+
+.status-indicator.disconnected {
+    background-color: #e74c3c;
+    box-shadow: 0 0 6px rgba(231, 76, 60, 0.6);
+}
+
+.btn-primary {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+}
+
+.btn-primary:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
 }
 
 /* 나머지 CSS는 동일 */

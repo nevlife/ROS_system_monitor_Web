@@ -32,9 +32,48 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // ROS 연결 함수
 function connectToRos() {
-    const ip = document.getElementById("ros-ip").value || "localhost";
-    const port = document.getElementById("ros-port").value || "9090";
-    const url = `ws://${ip}:${port}`;
+    let url = document.getElementById("ros-url").value || "ws://localhost:9090";
+
+    logManager.log(`원본 URL: "${url}"`);
+
+    // URL 정리
+    url = url.trim();
+    logManager.log(`trim 후: "${url}"`);
+
+    // 이미 올바른 WebSocket URL인지 먼저 확인
+    if (url.startsWith("ws://") || url.startsWith("wss://")) {
+        logManager.log("이미 올바른 WebSocket URL입니다");
+    }
+    // ngrok HTTPS URL을 WSS로 변환
+    else if (url.startsWith("https://") && url.includes("ngrok.io")) {
+        logManager.log("ngrok HTTPS URL 감지됨");
+        url = url.replace("https://", "wss://");
+        logManager.log(`ngrok HTTPS URL을 WSS로 변환: ${url}`);
+    }
+    // 일반 HTTP URL을 WS로 변환
+    else if (url.startsWith("http://")) {
+        logManager.log("일반 HTTP URL 감지됨");
+        url = url.replace("http://", "ws://");
+        logManager.log(`HTTP URL을 WS로 변환: ${url}`);
+    }
+    // 프로토콜이 없는 경우 ws:// 추가
+    else {
+        logManager.log("프로토콜 없는 URL 감지됨");
+        url = "ws://" + url;
+        logManager.log(`프로토콜 추가: ${url}`);
+    }
+
+    logManager.log(`최종 URL: "${url}"`);
+
+    // URL 형식 검사
+    try {
+        new URL(url);
+        logManager.log("URL 형식 검사 통과");
+    } catch (e) {
+        logManager.log(`잘못된 URL 형식: ${url} - ${e.message}`, "error");
+        updateConnectionStatus(false, "URL 형식 오류");
+        return;
+    }
 
     logManager.log(`ROS Bridge에 연결 시도: ${url}`);
     updateConnectionStatus(false, "연결 중...");
@@ -51,19 +90,29 @@ function connectToRos() {
         // 구독자들 설정
         setupSubscribers();
 
-        // 연결 버튼 비활성화
-        document.getElementById("connect-button").disabled = true;
-        document.getElementById("connect-button").textContent = "Connected";
+        // 연결 버튼을 Disconnect로 변경
+        const connectBtn = document.getElementById("connect-button");
+        connectBtn.disabled = false;
+        connectBtn.textContent = "Disconnect";
+        connectBtn.onclick = disconnectFromRos;
     });
 
     ros.on("error", function (error) {
         isConnected = false;
         updateConnectionStatus(false, "연결 오류");
-        logManager.log(`연결 오류: ${error}`, "error");
 
-        // 연결 버튼 활성화
-        document.getElementById("connect-button").disabled = false;
-        document.getElementById("connect-button").textContent = "Connect";
+        // 더 자세한 에러 정보 로깅
+        console.error("ROS 연결 에러:", error);
+        console.error("에러 타입:", typeof error);
+        console.error("에러 내용:", JSON.stringify(error, null, 2));
+
+        logManager.log(`연결 오류 상세: ${JSON.stringify(error)}`, "error");
+
+        // 연결 버튼을 다시 Connect로 변경
+        const connectBtn = document.getElementById("connect-button");
+        connectBtn.disabled = false;
+        connectBtn.textContent = "Connect";
+        connectBtn.onclick = connectToRos;
     });
 
     ros.on("close", function () {
@@ -71,10 +120,27 @@ function connectToRos() {
         updateConnectionStatus(false, "연결 끊김");
         logManager.log("ROS Bridge 연결이 끊어졌습니다.", "warning");
 
-        // 연결 버튼 활성화
-        document.getElementById("connect-button").disabled = false;
-        document.getElementById("connect-button").textContent = "Connect";
+        // 연결 버튼을 다시 Connect로 변경
+        const connectBtn = document.getElementById("connect-button");
+        connectBtn.disabled = false;
+        connectBtn.textContent = "Reconnect";
+        connectBtn.onclick = connectToRos;
     });
+}
+
+// ROS 연결 해제 함수
+function disconnectFromRos() {
+    if (ros && isConnected) {
+        logManager.log("ROS Bridge 연결을 해제합니다.");
+        ros.close();
+
+        // 연결 버튼을 다시 Connect로 변경
+        const connectBtn = document.getElementById("connect-button");
+        connectBtn.textContent = "Connect";
+        connectBtn.onclick = connectToRos;
+
+        updateConnectionStatus(false, "연결 해제됨");
+    }
 }
 
 // 구독자 설정

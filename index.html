@@ -21,16 +21,13 @@
                 <div class="connection-setup">
                     <input
                         type="text"
-                        id="ros-ip"
-                        placeholder="ROS Bridge IP (예: 192.168.1.100)"
-                        value="localhost"
+                        id="ros-url"
+                        placeholder="예: ws://localhost:9090, https://abc123.ngrok.io, 192.168.1.100:9090"
+                        value="ws://localhost:9090"
                     />
-                    <input
-                        type="number"
-                        id="ros-port"
-                        placeholder="Port"
-                        value="9090"
-                    />
+                    <div class="connection-help">
+                        <small>💡 ngrok 사용시 https URL을 그대로 입력하세요 (자동으로 wss로 변환됩니다)</small>
+                    </div>
                     <button
                         id="connect-button"
                         class="btn-primary"
