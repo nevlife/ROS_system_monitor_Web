@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        />
+        <title>ROS Monitor Dashboard</title>
+        <script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <link
+            rel="stylesheet"
+            href="css/styles.css"
+        />
+    </head>
+    <body>
+        <div class="container">
+            <header class="header">
+                <h1>ROS Monitor System</h1>
+                <div class="connection-setup">
+                    <input
+                        type="text"
+                        id="ros-ip"
+                        placeholder="ROS Bridge IP (예: 192.168.1.100)"
+                        value="localhost"
+                    />
+                    <input
+                        type="number"
+                        id="ros-port"
+                        placeholder="Port"
+                        value="9090"
+                    />
+                    <button
+                        id="connect-button"
+                        class="btn-primary"
+                    >
+                        Connect
+                    </button>
+                    <div class="connection-status">
+                        <span
+                            class="status-indicator disconnected"
+                            id="status-indicator"
+                        ></span>
+                        <span id="status-text">연결 대기</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard">
+                <!-- 시스템 리소스 상태 -->
+                <div class="system-status">
+                    <div class="status-card">
+                        <h3>CPU Status</h3>
+                        <div id="cpu-info">CPU: -% | Temp: -°C | Load: -, -, -</div>
+                    </div>
+                    <div class="status-card">
+                        <h3>Memory Status</h3>
+                        <div id="memory-info">Mem: -/- MB (-％)</div>
+                    </div>
+                    <div class="status-card">
+                        <h3>GPU Status</h3>
+                        <div id="gpu-info">GPU: -% | Mem: -/- MB | Temp: -°C</div>
+                    </div>
+                </div>
+
+                <!-- 메인 콘텐츠 영역 -->
+                <div class="main-content">
+                    <!-- 로그 패널 -->
+                    <div class="log-panel">
+                        <h3>System Logs</h3>
+                        <div
+                            class="log-container"
+                            id="log-container"
+                        >
+                            <div class="log-entry">[시스템 시작] ROS Monitor 웹 인터페이스 초기화...</div>
+                        </div>
+                    </div>
+
+                    <!-- 모니터링 패널들 -->
+                    <div class="monitoring-panels">
+                        <!-- ROS 토픽 모니터링 -->
+                        <div class="panel">
+                            <h3>ROS Topics</h3>
+                            <div class="table-container">
+                                <table id="topics-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Topic Name</th>
+                                            <th>Target Hz</th>
+                                            <th>Hz</th>
+                                            <th>Bandwidth</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="topics-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- ROS 노드 모니터링 -->
+                        <div class="panel">
+                            <h3>ROS Nodes</h3>
+                            <div class="table-container">
+                                <table id="nodes-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Node Name</th>
+                                            <th>CPU (%)</th>
+                                            <th>RAM (MB)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="nodes-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GPU 프로세스 모니터링 -->
+                    <div class="panel gpu-panel">
+                        <h3>GPU Processes</h3>
+                        <div class="table-container">
+                            <table id="gpu-table">
+                                <thead>
+                                    <tr>
+                                        <th>PID</th>
+                                        <th>Type</th>
+                                        <th>SM (%)</th>
+                                        <th>Mem (%)</th>
+                                        <th>Enc</th>
+                                        <th>Dec</th>
+                                        <th>Jpg</th>
+                                        <th>Ofa</th>
+                                        <th>Command</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gpu-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Rosbag 레코더 -->
+                    <div class="panel rosbag-panel">
+                        <h3>Rosbag Recorder</h3>
+                        <div class="rosbag-controls">
+                            <div class="recording-status">
+                                <div
+                                    class="status-circle"
+                                    id="recording-indicator"
+                                ></div>
+                                <span id="recording-time">00:00:00</span>
+                            </div>
+                            <button
+                                id="record-button"
+                                class="btn-primary"
+                            >
+                                Start Record
+                            </button>
+                            <button
+                                id="edit-topics-button"
+                                class="btn-secondary"
+                            >
+                                Edit Topics
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 토픽 편집 모달 -->
+            <div
+                id="topic-modal"
+                class="modal"
+            >
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Edit Topics</h3>
+                        <span
+                            class="close"
+                            id="close-modal"
+                            >&times;</span
+                        >
+                    </div>
+                    <div class="modal-body">
+                        <textarea
+                            id="topics-textarea"
+                            placeholder="Enter topics one per line..."
+                        ></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button
+                            id="save-topics"
+                            class="btn-primary"
+                        >
+                            Save
+                        </button>
+                        <button
+                            id="cancel-topics"
+                            class="btn-secondary"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="js/systemMonitor.js"></script>
+        <script src="js/topicMonitor.js"></script>
+        <script src="js/nodeMonitor.js"></script>
+        <script src="js/gpuMonitor.js"></script>
+        <script src="js/logManager.js"></script>
+        <script src="js/rosbagRecorder.js"></script>
+        <script src="js/main.js"></script>
+    </body>
+</html>
