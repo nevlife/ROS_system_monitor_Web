@@ -57,6 +57,21 @@ class TopicMonitor {
         const allTopics = new Map([...this.topicData, ...this.inactiveTopics]);
         const sortedTopics = Array.from(allTopics.keys()).sort();
 
+        if (sortedTopics.length === 0) {
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+            cell.colSpan = 5;
+            cell.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #95a5a6;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">📡</div>
+                    <div style="font-style: italic;">토픽 데이터를 기다리는 중...</div>
+                </div>
+            `;
+            row.appendChild(cell);
+            this.tbody.appendChild(row);
+            return;
+        }
+
         sortedTopics.forEach((topicName) => {
             const data = this.topicData.get(topicName) || this.inactiveTopics.get(topicName);
             const isActive = this.topicData.has(topicName);
@@ -65,38 +80,88 @@ class TopicMonitor {
 
             // 토픽 이름
             const nameCell = document.createElement("td");
-            nameCell.textContent = topicName;
-            if (!isActive) {
-                nameCell.className = "inactive-topic";
-            }
+            nameCell.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.2rem;">${isActive ? '🟢' : '🔴'}</span>
+                    <span style="${!isActive ? 'color: #95a5a6; font-style: italic;' : 'font-weight: 500;'}">${topicName}</span>
+                </div>
+            `;
             row.appendChild(nameCell);
 
             if (isActive) {
                 // Target Hz
                 const targetCell = document.createElement("td");
                 const targetHz = data.hzTarget;
-                targetCell.textContent = targetHz === -1 || targetHz < 0 ? "None" : targetHz.toFixed(2);
+                targetCell.innerHTML = `
+                    <span style="font-weight: 600; color: #34495e;">
+                        ${targetHz === -1 || targetHz < 0 ? 'None' : targetHz.toFixed(2) + ' Hz'}
+                    </span>
+                `;
                 row.appendChild(targetCell);
 
-                // Hz
+                // Current Hz
                 const hzCell = document.createElement("td");
-                hzCell.textContent = data.hz.toFixed(2);
+                const hzValue = data.hz.toFixed(2);
+                let hzColor = '#27ae60';
+                let hzIcon = '✅';
+                
                 if (data.hzErrorLevel >= 2) {
+                    hzColor = '#e74c3c';
+                    hzIcon = '❌';
                     hzCell.className = "error-cell";
                 } else if (data.hzErrorLevel >= 1) {
+                    hzColor = '#f39c12';
+                    hzIcon = '⚠️';
                     hzCell.className = "warning-cell";
                 }
+
+                hzCell.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span>${hzIcon}</span>
+                        <span style="font-weight: 600; color: ${hzColor};">${hzValue} Hz</span>
+                    </div>
+                `;
                 row.appendChild(hzCell);
 
                 // Bandwidth
                 const bwCell = document.createElement("td");
-                bwCell.textContent = this.formatBandwidth(data.bw);
+                const bwFormatted = this.formatBandwidth(data.bw);
+                bwCell.innerHTML = `
+                    <span style="font-weight: 500; color: #7f8c8d;">
+                        📊 ${bwFormatted}
+                    </span>
+                `;
                 row.appendChild(bwCell);
+
+                // Status
+                const statusCell = document.createElement("td");
+                let statusText = 'Good';
+                let statusColor = '#27ae60';
+                let statusIcon = '✅';
+
+                if (data.hzErrorLevel >= 2) {
+                    statusText = 'Critical';
+                    statusColor = '#e74c3c';
+                    statusIcon = '🚨';
+                } else if (data.hzErrorLevel >= 1) {
+                    statusText = 'Warning';
+                    statusColor = '#f39c12';
+                    statusIcon = '⚠️';
+                }
+
+                statusCell.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span>${statusIcon}</span>
+                        <span style="font-weight: 600; color: ${statusColor};">${statusText}</span>
+                    </div>
+                `;
+                row.appendChild(statusCell);
+
             } else {
-                // 비활성 토픽은 빈 셀
-                for (let i = 0; i < 3; i++) {
+                // 비활성 토픽은 회색으로 표시
+                for (let i = 0; i < 4; i++) {
                     const emptyCell = document.createElement("td");
-                    emptyCell.textContent = "";
+                    emptyCell.innerHTML = `<span style="color: #bdc3c7;">-</span>`;
                     row.appendChild(emptyCell);
                 }
             }

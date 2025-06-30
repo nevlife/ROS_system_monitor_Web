@@ -20,16 +20,36 @@ class SystemMonitor {
         const load5 = loadAvg[1]?.toFixed(2) || "-";
         const load15 = loadAvg[2]?.toFixed(2) || "-";
 
-        this.cpuElement.textContent = `CPU: ${cpuUsage}% | Temp: ${cpuTemp}°C | Load: ${load1}, ${load5}, ${load15}`;
-
-        // CPU 경고 표시
+        // CPU 상태에 따른 이모지와 색상
+        let cpuIcon = "💻";
+        let cpuColor = "#2c3e50";
+        
         if (message.CpuErrorLevel > 1) {
-            this.cpuElement.style.color = "#e74c3c";
+            cpuIcon = "🔥";
+            cpuColor = "#e74c3c";
         } else if (message.CpuErrorLevel > 0) {
-            this.cpuElement.style.color = "#f39c12";
+            cpuIcon = "⚠️";
+            cpuColor = "#f39c12";
+        } else if (message.pCpu > 80) {
+            cpuIcon = "🏃";
+            cpuColor = "#f39c12";
+        } else if (message.pCpu > 50) {
+            cpuIcon = "🚶";
+            cpuColor = "#3498db";
         } else {
-            this.cpuElement.style.color = "#2c3e50";
+            cpuIcon = "😴";
+            cpuColor = "#27ae60";
         }
+
+        this.cpuElement.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; color: ${cpuColor};">
+                <span style="font-size: 1.5rem;">${cpuIcon}</span>
+                <div>
+                    <div style="font-weight: 600; font-size: 1.1rem;">CPU: ${cpuUsage}% | Temp: ${cpuTemp}°C</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Load: ${load1}, ${load5}, ${load15}</div>
+                </div>
+            </div>
+        `;
     }
 
     updateMemoryInfo(message) {
@@ -37,16 +57,36 @@ class SystemMonitor {
         const memTotal = (message.ramTotal / (1024 * 1024))?.toFixed(2) || "-";
         const memPercent = message.ramTotal > 0 ? ((message.ramUsed / message.ramTotal) * 100).toFixed(2) : "-";
 
-        this.memoryElement.textContent = `Mem: ${memUsed}/${memTotal} MB (${memPercent}%)`;
-
-        // 메모리 경고 표시
+        // 메모리 상태에 따른 이모지와 색상
+        let memIcon = "🧠";
+        let memColor = "#2c3e50";
+        
         if (message.RamErrorLevel > 1) {
-            this.memoryElement.style.color = "#e74c3c";
+            memIcon = "🚨";
+            memColor = "#e74c3c";
         } else if (message.RamErrorLevel > 0) {
-            this.memoryElement.style.color = "#f39c12";
+            memIcon = "⚠️";
+            memColor = "#f39c12";
+        } else if (memPercent > 80) {
+            memIcon = "📈";
+            memColor = "#f39c12";
+        } else if (memPercent > 60) {
+            memIcon = "📊";
+            memColor = "#3498db";
         } else {
-            this.memoryElement.style.color = "#2c3e50";
+            memIcon = "✅";
+            memColor = "#27ae60";
         }
+
+        this.memoryElement.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; color: ${memColor};">
+                <span style="font-size: 1.5rem;">${memIcon}</span>
+                <div>
+                    <div style="font-weight: 600; font-size: 1.1rem;">Mem: ${memUsed}/${memTotal} MB</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Usage: ${memPercent}%</div>
+                </div>
+            </div>
+        `;
     }
 
     updateGpuInfo(message) {
@@ -55,15 +95,35 @@ class SystemMonitor {
         const gpuMemTotal = (message.gpuMemTotal / (1024 * 1024))?.toFixed(2) || "-";
         const gpuTemp = message.GpuTemp?.toFixed(2) || "-";
 
-        this.gpuElement.textContent = `GPU: ${gpuUsage}% | Mem: ${gpuMemUsed}/${gpuMemTotal} MB | Temp: ${gpuTemp}°C`;
-
-        // GPU 경고 표시
+        // GPU 상태에 따른 이모지와 색상
+        let gpuIcon = "🎮";
+        let gpuColor = "#2c3e50";
+        
         if (message.GpuErrorLevel > 1 || message.GpuMemErrorLevel > 1) {
-            this.gpuElement.style.color = "#e74c3c";
+            gpuIcon = "🔥";
+            gpuColor = "#e74c3c";
         } else if (message.GpuErrorLevel > 0 || message.GpuMemErrorLevel > 0) {
-            this.gpuElement.style.color = "#f39c12";
+            gpuIcon = "⚠️";
+            gpuColor = "#f39c12";
+        } else if (message.pGpu > 80) {
+            gpuIcon = "🚀";
+            gpuColor = "#3498db";
+        } else if (message.pGpu > 50) {
+            gpuIcon = "⚡";
+            gpuColor = "#27ae60";
         } else {
-            this.gpuElement.style.color = "#2c3e50";
+            gpuIcon = "😴";
+            gpuColor = "#95a5a6";
         }
+
+        this.gpuElement.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; color: ${gpuColor};">
+                <span style="font-size: 1.5rem;">${gpuIcon}</span>
+                <div>
+                    <div style="font-weight: 600; font-size: 1.1rem;">GPU: ${gpuUsage}% | Temp: ${gpuTemp}°C</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Mem: ${gpuMemUsed}/${gpuMemTotal} MB</div>
+                </div>
+            </div>
+        `;
     }
 }

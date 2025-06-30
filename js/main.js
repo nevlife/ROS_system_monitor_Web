@@ -1,4 +1,5 @@
 // 전역 변수
+//ws://223.171.137.66:9090
 let ros = null;
 let systemMonitor = null;
 let topicMonitor = null;
