@@ -1,11 +1,21 @@
 class NodeMonitor {
     constructor() {
         this.tbody = document.getElementById("nodes-tbody");
+        this.titleElement = document.getElementById("nodes-monitor-title");
         this.nodeData = new Map();
+        this.totalCores = 0;
+        this.coresInitialized = false;
     }
 
     updateNodeStatus(message) {
         this.nodeData.clear();
+
+        // 코어 개수를 한 번만 초기화
+        if (!this.coresInitialized && message.node.length > 0 && message.node[0].logicalCores) {
+            this.totalCores = message.node[0].logicalCores;
+            this.updateTitle();
+            this.coresInitialized = true;
+        }
 
         message.node.forEach((nodeStatus) => {
             const nodeName = nodeStatus.key;
@@ -14,19 +24,35 @@ class NodeMonitor {
 
             this.nodeData.set(nodeName, {
                 cpu: cpuUsage,
+                cpuTarget: nodeStatus.CpuTarget,
                 cpuErrorLevel: nodeStatus.CpuErrorLevel,
                 mem: memUsage,
+                ramTarget: nodeStatus.RamTarget,
+                ramErrorLevel: nodeStatus.RamErrorLevel,
+                logicalCores: nodeStatus.logicalCores,
             });
 
-            // CPU 사용률 경고
-            if (cpuUsage > 90) {
-                window.getLogManager()?.error(`Node ${nodeName}: high CPU usage - ${cpuUsage.toFixed(2)}%`);
-            } else if (cpuUsage > 80) {
-                window.getLogManager()?.warning(`Node ${nodeName}: elevated CPU usage - ${cpuUsage.toFixed(2)}%`);
+            // ErrorLevel 기반 로깅
+            if (nodeStatus.CpuErrorLevel >= 2) {
+                window.getLogManager()?.error(`Node ${nodeName}: CPU critical - ${cpuUsage.toFixed(2)}%`);
+            } else if (nodeStatus.CpuErrorLevel >= 1) {
+                window.getLogManager()?.warning(`Node ${nodeName}: CPU warning - ${cpuUsage.toFixed(2)}%`);
+            }
+
+            if (nodeStatus.RamErrorLevel >= 2) {
+                window.getLogManager()?.error(`Node ${nodeName}: RAM critical - ${memUsage.toFixed(2)} MB`);
+            } else if (nodeStatus.RamErrorLevel >= 1) {
+                window.getLogManager()?.warning(`Node ${nodeName}: RAM warning - ${memUsage.toFixed(2)} MB`);
             }
         });
 
         this.updateTable();
+    }
+
+    updateTitle() {
+        if (this.titleElement && this.totalCores > 0) {
+            this.titleElement.innerHTML = `ROS Nodes Monitor <span style="font-size: 0.9rem; color: #7f8c8d; font-weight: normal;">(${this.totalCores} cores)</span>`;
+        }
     }
 
     updateTable() {
@@ -38,8 +64,7 @@ class NodeMonitor {
             cell.colSpan = 4;
             cell.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: #95a5a6;">
-                    <div style="font-size: 3rem; margin-bottom: 10px;">🔗</div>
-                    <div style="font-style: italic;">노드 데이터를 기다리는 중...</div>
+                    <div style="font-style: italic;">Waiting for node data...</div>
                 </div>
             `;
             row.appendChild(cell);
@@ -55,9 +80,20 @@ class NodeMonitor {
 
             // 노드 이름
             const nameCell = document.createElement("td");
+
+            // 전체 ErrorLevel 중 가장 심각한 상태 확인
+            const overallErrorLevel = Math.max(data.cpuErrorLevel || 0, data.ramErrorLevel || 0);
+
+            let nodeStatusColor = "#27ae60"; // 정상 (ErrorLevel 0)
+            if (overallErrorLevel === 2) {
+                nodeStatusColor = "#e74c3c"; // 심각한 오류
+            } else if (overallErrorLevel === 1) {
+                nodeStatusColor = "#f39c12"; // 경고
+            }
+
             nameCell.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 1.2rem;">⚡</span>
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${nodeStatusColor};"></div>
                     <span style="font-weight: 500;">${nodeName}</span>
                 </div>
             `;
@@ -66,24 +102,20 @@ class NodeMonitor {
             // CPU 사용률
             const cpuCell = document.createElement("td");
             const cpuValue = data.cpu.toFixed(2);
-            let cpuColor = "#27ae60";
-            let cpuIcon = "🟢";
+            let cpuColor = "#27ae60"; // 정상 (ErrorLevel 0)
             let cpuClass = "";
 
-            if (data.cpu > 90) {
-                cpuColor = "#e74c3c";
-                cpuIcon = "🔴";
+            if (data.cpuErrorLevel === 2) {
+                cpuColor = "#e74c3c"; // 심각한 오류
                 cpuClass = "error-cell";
-            } else if (data.cpu > 70) {
-                cpuColor = "#f39c12";
-                cpuIcon = "🟡";
+            } else if (data.cpuErrorLevel === 1) {
+                cpuColor = "#f39c12"; // 경고
                 cpuClass = "warning-cell";
             }
 
             cpuCell.className = cpuClass;
             cpuCell.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span>${cpuIcon}</span>
                     <div style="flex: 1;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span style="font-weight: 600; color: ${cpuColor};">${cpuValue}%</span>
@@ -102,14 +134,18 @@ class NodeMonitor {
             // 메모리 사용량
             const memCell = document.createElement("td");
             const memValue = data.mem.toFixed(2);
-            const memIcon = this.getMemoryIcon(data.mem);
+
+            let memColor = "#34495e"; // 기본 색상
+            if (data.ramErrorLevel === 2) {
+                memColor = "#e74c3c"; // 심각한 오류
+            } else if (data.ramErrorLevel === 1) {
+                memColor = "#f39c12"; // 경고
+            }
 
             memCell.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 1.1rem;">${memIcon}</span>
                     <div>
-                        <div style="font-weight: 600; color: #34495e;">${memValue} MB</div>
-                        <div style="font-size: 0.8rem; color: #7f8c8d;">${this.formatMemorySize(data.mem)}</div>
+                        <div style="font-weight: 600; color: ${memColor};">${memValue} MB</div>
                     </div>
                 </div>
             `;
@@ -117,46 +153,27 @@ class NodeMonitor {
 
             // Status
             const statusCell = document.createElement("td");
-            let statusText = "Healthy";
-            let statusColor = "#27ae60";
-            let statusIcon = "✅";
+            let statusText = "Good";
+            let finalStatusColor = "#27ae60";
 
-            if (data.cpu > 90) {
-                statusText = "High Load";
-                statusColor = "#e74c3c";
-                statusIcon = "🚨";
-            } else if (data.cpu > 70) {
-                statusText = "Medium Load";
-                statusColor = "#f39c12";
-                statusIcon = "⚠️";
-            } else if (data.cpu < 1) {
-                statusText = "Idle";
-                statusColor = "#95a5a6";
-                statusIcon = "😴";
+            // CPU와 RAM ErrorLevel 중 더 심각한 상태 적용
+            const maxErrorLevel = Math.max(data.cpuErrorLevel || 0, data.ramErrorLevel || 0);
+
+            if (maxErrorLevel === 2) {
+                statusText = "Critical";
+                finalStatusColor = "#e74c3c";
+            } else if (maxErrorLevel === 1) {
+                statusText = "Warning";
+                finalStatusColor = "#f39c12";
             }
 
             statusCell.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <span>${statusIcon}</span>
-                    <span style="font-weight: 600; color: ${statusColor};">${statusText}</span>
-                </div>
+                <span style="font-weight: 600; color: ${finalStatusColor};">${statusText}</span>
             `;
             row.appendChild(statusCell);
 
             this.tbody.appendChild(row);
         });
-    }
-
-    getMemoryIcon(memMB) {
-        if (memMB < 10) {
-            return "🟢";
-        } else if (memMB < 100) {
-            return "🟡";
-        } else if (memMB < 500) {
-            return "🟠";
-        } else {
-            return "🔴";
-        }
     }
 
     formatMemorySize(memMB) {
@@ -167,5 +184,24 @@ class NodeMonitor {
         } else {
             return `${(memMB / 1024).toFixed(2)} GB`;
         }
+    }
+
+    reset() {
+        this.nodeData.clear();
+        this.coresInitialized = false;
+        this.totalCores = 0;
+
+        // 제목도 초기화
+        if (this.titleElement) {
+            this.titleElement.innerHTML = "ROS Nodes Monitor";
+        }
+
+        this.tbody.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align: center; color: #95a5a6; font-style: italic; padding: 40px;">
+                    Please connect to ROS to check node information
+                </td>
+            </tr>
+        `;
     }
 }

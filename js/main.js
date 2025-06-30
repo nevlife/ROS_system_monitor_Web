@@ -1,5 +1,5 @@
-// 전역 변수
-//ws://223.171.137.66:9090
+//wsl 내꺼 : http://172.28.191.188:9090
+//ssc : http://223.171.137.66:9090
 let ros = null;
 let systemMonitor = null;
 let topicMonitor = null;
@@ -9,11 +9,19 @@ let logManager = null;
 let rosbagRecorder = null;
 let isConnected = false;
 
+// 구독자들을 저장할 변수
+let subscribers = {
+    systemStatus: null,
+    topicStatus: null,
+    nodeStatus: null,
+    gpuProc: null,
+};
+
 // 애플리케이션 초기화
 document.addEventListener("DOMContentLoaded", function () {
     // 로그 매니저 초기화
     logManager = new LogManager();
-    logManager.log("ROS Monitor 웹 인터페이스가 시작되었습니다.");
+    logManager.log("ROS Monitor Web Interface Started");
 
     // 모니터링 컴포넌트들 초기화
     systemMonitor = new SystemMonitor();
@@ -28,56 +36,50 @@ document.addEventListener("DOMContentLoaded", function () {
     // 연결 상태 표시 업데이트
     updateConnectionStatus(false, "연결 대기");
 
-    logManager.log("모든 컴포넌트가 초기화되었습니다.");
+    logManager.log("initialized all components");
 });
 
 // ROS 연결 함수
 function connectToRos() {
     let url = document.getElementById("ros-url").value || "ws://localhost:9090";
 
-    logManager.log(`원본 URL: "${url}"`);
+    logManager.log(`original URL: "${url}"`);
 
     // URL 정리
     url = url.trim();
-    logManager.log(`trim 후: "${url}"`);
+    logManager.log(`trimmed: "${url}"`);
 
     // 이미 올바른 WebSocket URL인지 먼저 확인
     if (url.startsWith("ws://") || url.startsWith("wss://")) {
-        logManager.log("이미 올바른 WebSocket URL입니다");
-    }
-    // ngrok HTTPS URL을 WSS로 변환
-    else if (url.startsWith("https://") && url.includes("ngrok.io")) {
-        logManager.log("ngrok HTTPS URL 감지됨");
-        url = url.replace("https://", "wss://");
-        logManager.log(`ngrok HTTPS URL을 WSS로 변환: ${url}`);
+        logManager.log("already valid WebSocket URL");
     }
     // 일반 HTTP URL을 WS로 변환
     else if (url.startsWith("http://")) {
-        logManager.log("일반 HTTP URL 감지됨");
+        logManager.log("detected HTTP URL");
         url = url.replace("http://", "ws://");
-        logManager.log(`HTTP URL을 WS로 변환: ${url}`);
+        logManager.log(`converted HTTP URL to WS: ${url}`);
     }
     // 프로토콜이 없는 경우 ws:// 추가
     else {
-        logManager.log("프로토콜 없는 URL 감지됨");
+        logManager.log("detected URL without protocol");
         url = "ws://" + url;
-        logManager.log(`프로토콜 추가: ${url}`);
+        logManager.log(`added protocol: ${url}`);
     }
 
-    logManager.log(`최종 URL: "${url}"`);
+    logManager.log(`final URL: "${url}"`);
 
     // URL 형식 검사
     try {
         new URL(url);
-        logManager.log("URL 형식 검사 통과");
+        logManager.log("URL format test passed");
     } catch (e) {
-        logManager.log(`잘못된 URL 형식: ${url} - ${e.message}`, "error");
-        updateConnectionStatus(false, "URL 형식 오류");
+        logManager.log(`invalid URL format: ${url} - ${e.message}`, "error");
+        updateConnectionStatus(false, "URL format error");
         return;
     }
 
-    logManager.log(`ROS Bridge에 연결 시도: ${url}`);
-    updateConnectionStatus(false, "연결 중...");
+    logManager.log(`connecting to ROS Bridge: ${url}`);
+    updateConnectionStatus(false, "connecting...");
 
     ros = new ROSLIB.Ros({
         url: url,
@@ -85,8 +87,8 @@ function connectToRos() {
 
     ros.on("connection", function () {
         isConnected = true;
-        updateConnectionStatus(true, "연결됨");
-        logManager.log("ROS Bridge에 성공적으로 연결되었습니다.", "info");
+        updateConnectionStatus(true, "connected");
+        logManager.log("successfully connected to ROS Bridge", "info");
 
         // 구독자들 설정
         setupSubscribers();
@@ -100,14 +102,17 @@ function connectToRos() {
 
     ros.on("error", function (error) {
         isConnected = false;
-        updateConnectionStatus(false, "연결 오류");
+        updateConnectionStatus(false, "connection error");
+
+        // 컴포넌트 초기화
+        resetAllComponents();
 
         // 더 자세한 에러 정보 로깅
-        console.error("ROS 연결 에러:", error);
-        console.error("에러 타입:", typeof error);
-        console.error("에러 내용:", JSON.stringify(error, null, 2));
+        console.error("ROS connection error:", error);
+        console.error("error type:", typeof error);
+        console.error("error content:", JSON.stringify(error, null, 2));
 
-        logManager.log(`연결 오류 상세: ${JSON.stringify(error)}`, "error");
+        logManager.log(`connection error details: ${JSON.stringify(error)}`, "error");
 
         // 연결 버튼을 다시 Connect로 변경
         const connectBtn = document.getElementById("connect-button");
@@ -118,8 +123,12 @@ function connectToRos() {
 
     ros.on("close", function () {
         isConnected = false;
-        updateConnectionStatus(false, "연결 끊김");
-        logManager.log("ROS Bridge 연결이 끊어졌습니다.", "warning");
+        updateConnectionStatus(false, "disconnected");
+
+        // 컴포넌트 초기화 (의도하지 않은 연결 끊김인 경우)
+        resetAllComponents();
+
+        logManager.log("ROS Bridge disconnected", "warning");
 
         // 연결 버튼을 다시 Connect로 변경
         const connectBtn = document.getElementById("connect-button");
@@ -132,65 +141,104 @@ function connectToRos() {
 // ROS 연결 해제 함수
 function disconnectFromRos() {
     if (ros && isConnected) {
-        logManager.log("ROS Bridge 연결을 해제합니다.");
+        logManager.log("disconnecting from ROS Bridge");
+
+        // 모든 구독자 해제
+        unsubscribeAll();
+
+        // 모든 컴포넌트 초기화
+        resetAllComponents();
+
+        // ROS 연결 종료
         ros.close();
+
+        // 즉시 상태 업데이트 (close 이벤트를 기다리지 않음)
+        isConnected = false;
+        updateConnectionStatus(false, "disconnected");
 
         // 연결 버튼을 다시 Connect로 변경
         const connectBtn = document.getElementById("connect-button");
         connectBtn.textContent = "Connect";
         connectBtn.onclick = connectToRos;
 
-        updateConnectionStatus(false, "연결 해제됨");
+        logManager.log("ROS Bridge disconnected", "info");
     }
 }
 
 // 구독자 설정
 function setupSubscribers() {
+    // 기존 구독자들이 있다면 먼저 해제
+    unsubscribeAll();
+
     // 시스템 상태 구독
-    const systemStatusSub = new ROSLIB.Topic({
+    subscribers.systemStatus = new ROSLIB.Topic({
         ros: ros,
         name: "/system_status",
         messageType: "ros_monitor/SystemStatus",
     });
 
-    systemStatusSub.subscribe(function (message) {
+    subscribers.systemStatus.subscribe(function (message) {
         systemMonitor.updateSystemStatus(message);
     });
 
     // 토픽 상태 구독
-    const topicStatusSub = new ROSLIB.Topic({
+    subscribers.topicStatus = new ROSLIB.Topic({
         ros: ros,
         name: "/topic_hzbw",
         messageType: "ros_monitor/TopicStatusArray",
     });
 
-    topicStatusSub.subscribe(function (message) {
+    subscribers.topicStatus.subscribe(function (message) {
         topicMonitor.updateTopicStatus(message);
     });
 
     // 노드 상태 구독
-    const nodeStatusSub = new ROSLIB.Topic({
+    subscribers.nodeStatus = new ROSLIB.Topic({
         ros: ros,
         name: "/nodes_status",
         messageType: "ros_monitor/NodeStatusArray",
     });
 
-    nodeStatusSub.subscribe(function (message) {
+    subscribers.nodeStatus.subscribe(function (message) {
         nodeMonitor.updateNodeStatus(message);
     });
 
     // GPU 프로세스 구독
-    const gpuProcSub = new ROSLIB.Topic({
+    subscribers.gpuProc = new ROSLIB.Topic({
         ros: ros,
         name: "/gpu_proc_collector",
         messageType: "ros_monitor/GpuProcessArray",
     });
 
-    gpuProcSub.subscribe(function (message) {
+    subscribers.gpuProc.subscribe(function (message) {
         gpuMonitor.updateGpuProcesses(message);
     });
 
-    logManager.log("모든 ROS 토픽 구독이 설정되었습니다.");
+    logManager.log("all ROS topics subscribed");
+}
+
+// 모든 구독자 해제
+function unsubscribeAll() {
+    Object.keys(subscribers).forEach((key) => {
+        if (subscribers[key]) {
+            try {
+                subscribers[key].unsubscribe();
+                logManager.log(`unsubscribed: ${key}`);
+            } catch (error) {
+                logManager.log(`unsubscribe failed: ${key} - ${error.message}`, "warning");
+            }
+            subscribers[key] = null;
+        }
+    });
+}
+
+// 모든 컴포넌트 초기화
+function resetAllComponents() {
+    if (systemMonitor) systemMonitor.reset();
+    if (topicMonitor) topicMonitor.reset();
+    if (nodeMonitor) nodeMonitor.reset();
+    if (gpuMonitor) gpuMonitor.reset();
+    logManager.log("all components initialized");
 }
 
 // 연결 상태 업데이트

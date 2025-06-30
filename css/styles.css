@@ -208,11 +208,6 @@ body {
     gap: 10px;
 }
 
-.log-panel h3::before {
-    content: "📋";
-    font-size: 1.1rem;
-}
-
 .log-container {
     background: #2c3e50;
     color: #ecf0f1;
@@ -277,9 +272,16 @@ body {
 /* 테이블 스타일 개선 */
 .table-container {
     overflow-x: auto;
+    overflow-y: auto;
+    max-height: 400px;
     border-radius: 10px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     background: white;
+}
+
+/* GPU 패널은 더 높게 설정 (더 많은 컬럼) */
+.gpu-panel .table-container {
+    max-height: 300px;
 }
 
 table {
@@ -291,6 +293,9 @@ table {
 thead {
     background: linear-gradient(135deg, #34495e, #2c3e50);
     color: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 thead th {
@@ -343,19 +348,9 @@ tbody td {
     margin-top: 25px;
 }
 
-.gpu-panel h3::before {
-    content: "🖥️";
-    font-size: 1.1rem;
-}
-
 /* Rosbag 패널 */
 .rosbag-panel {
     margin-top: 25px;
-}
-
-.rosbag-panel h3::before {
-    content: "📹";
-    font-size: 1.1rem;
 }
 
 .rosbag-controls {

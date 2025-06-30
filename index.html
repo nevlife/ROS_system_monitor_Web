@@ -17,12 +17,12 @@
     <body>
         <div class="container">
             <header class="header">
-                <h1>🤖 ROS Monitor System</h1>
+                <h1>ROS Monitor System</h1>
                 <div class="connection-setup">
                     <input
                         type="text"
                         id="ros-url"
-                        placeholder="예: ws://localhost:9090, https://abc123.ngrok.io, 192.168.1.100:9090"
+                        placeholder="example: ws://localhost:9090, ws://192.168.1.100:9090"
                         value="ws://localhost:9090"
                     />
                     <button
@@ -36,7 +36,7 @@
                             class="status-indicator disconnected"
                             id="status-indicator"
                         ></span>
-                        <span id="status-text">연결 대기</span>
+                        <span id="status-text">waiting for connection</span>
                     </div>
                 </div>
             </header>
@@ -45,15 +45,15 @@
                 <!-- 시스템 리소스 상태 -->
                 <div class="system-status">
                     <div class="status-card">
-                        <h3>💻 CPU Status</h3>
+                        <h3>CPU Status</h3>
                         <div id="cpu-info">CPU: -% | Temp: -°C | Load: -, -, -</div>
                     </div>
                     <div class="status-card">
-                        <h3>🧠 Memory Status</h3>
-                        <div id="memory-info">Mem: -/- MB (-％)</div>
+                        <h3>Memory Status</h3>
+                        <div id="memory-info">Mem: -/- MB (Usage: -%)</div>
                     </div>
                     <div class="status-card">
-                        <h3>🎮 GPU Status</h3>
+                        <h3>GPU Status</h3>
                         <div id="gpu-info">GPU: -% | Mem: -/- MB | Temp: -°C</div>
                     </div>
                 </div>
@@ -65,24 +65,24 @@
                         class="log-container"
                         id="log-container"
                     >
-                        <div class="log-entry">[시스템 시작] ROS Monitor 웹 인터페이스 초기화...</div>
+                        <div class="log-entry">[system start] ROS Monitor Web Interface initialized...</div>
                     </div>
                 </div>
 
-                <!-- 모니터링 패널들 (가로 배치) -->
+                <!-- 모니터링 패널 -->
                 <div class="monitoring-panels-horizontal">
                     <!-- ROS 토픽 모니터링 -->
                     <div class="panel">
-                        <h3>📡 ROS Topics Monitor</h3>
+                        <h3>ROS Topics Monitor</h3>
                         <div class="table-container">
                             <table id="topics-table">
                                 <thead>
                                     <tr>
-                                        <th>📂 Topic Name</th>
-                                        <th>🎯 Target Hz</th>
-                                        <th>⚡ Current Hz</th>
-                                        <th>📊 Bandwidth</th>
-                                        <th>📈 Status</th>
+                                        <th>Topic Name</th>
+                                        <th>Target Hz</th>
+                                        <th>Current Hz</th>
+                                        <th>Bandwidth</th>
+                                        <th>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody id="topics-tbody">
@@ -96,7 +96,7 @@
                                                 padding: 40px;
                                             "
                                         >
-                                            ROS에 연결하여 토픽 정보를 확인하세요
+                                            Connect to ROS to check topic information
                                         </td>
                                     </tr>
                                 </tbody>
@@ -106,15 +106,15 @@
 
                     <!-- ROS 노드 모니터링 -->
                     <div class="panel">
-                        <h3>🔗 ROS Nodes Monitor</h3>
+                        <h3 id="nodes-monitor-title">ROS Nodes Monitor</h3>
                         <div class="table-container">
                             <table id="nodes-table">
                                 <thead>
                                     <tr>
-                                        <th>🏷️ Node Name</th>
-                                        <th>💻 CPU Usage</th>
-                                        <th>🧠 RAM Usage</th>
-                                        <th>⚠️ Status</th>
+                                        <th>Node Name</th>
+                                        <th>CPU Usage</th>
+                                        <th>RAM Usage</th>
+                                        <th>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody id="nodes-tbody">
@@ -128,7 +128,7 @@
                                                 padding: 40px;
                                             "
                                         >
-                                            ROS에 연결하여 노드 정보를 확인하세요
+                                            Connect to ROS to check node information
                                         </td>
                                     </tr>
                                 </tbody>
@@ -144,24 +144,23 @@
                         <table id="gpu-table">
                             <thead>
                                 <tr>
-                                    <th>🆔 PID</th>
-                                    <th>🏷️ Type</th>
-                                    <th>⚡ SM (%)</th>
-                                    <th>🧠 Mem (%)</th>
-                                    <th>📊 Enc</th>
-                                    <th>📊 Dec</th>
-                                    <th>🖼️ Jpg</th>
-                                    <th>🔧 Ofa</th>
-                                    <th>💻 Command</th>
+                                    <th>PID</th>
+                                    <th>Username</th>
+                                    <th>Process Name</th>
+                                    <th>GPU Memory</th>
+                                    <th>SM (%)</th>
+                                    <th>Mem (%)</th>
+                                    <th>Type</th>
+                                    <th>Command</th>
                                 </tr>
                             </thead>
                             <tbody id="gpu-tbody">
                                 <tr>
                                     <td
-                                        colspan="9"
+                                        colspan="8"
                                         style="text-align: center; color: #95a5a6; font-style: italic; padding: 40px"
                                     >
-                                        GPU 프로세스 정보를 로딩 중...
+                                        Loading GPU process information...
                                     </td>
                                 </tr>
                             </tbody>
@@ -184,13 +183,13 @@
                             id="record-button"
                             class="btn-primary"
                         >
-                            🎬 Start Record
+                            Start Record
                         </button>
                         <button
                             id="edit-topics-button"
                             class="btn-secondary"
                         >
-                            ✏️ Edit Topics
+                            Edit Topics
                         </button>
                     </div>
                 </div>
@@ -203,7 +202,7 @@
             >
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3>📝 Edit Recording Topics</h3>
+                        <h3>Edit Recording Topics</h3>
                         <span
                             class="close"
                             id="close-modal"
@@ -213,7 +212,7 @@
                     <div class="modal-body">
                         <textarea
                             id="topics-textarea"
-                            placeholder="토픽을 한 줄에 하나씩 입력하세요...&#10;예:&#10;/cmd_vel&#10;/odom&#10;/scan&#10;/tf"
+                            placeholder="Enter topics one per line...&#10;example:&#10;/cmd_vel&#10;/odom&#10;/scan&#10;/tf"
                         ></textarea>
                     </div>
                     <div class="modal-footer">
@@ -221,13 +220,13 @@
                             id="save-topics"
                             class="btn-primary"
                         >
-                            💾 Save
+                            Save
                         </button>
                         <button
                             id="cancel-topics"
                             class="btn-secondary"
                         >
-                            ❌ Cancel
+                            Cancel
                         </button>
                     </div>
                 </div>
